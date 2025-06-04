@@ -1,6 +1,6 @@
-# TripBuddy - AI-powered Lost & Found Platform
+#  - AI-powered Lost & Found Platform
 
-TripBuddy is a platform that helps travelers reconnect with their lost items through advanced AI image recognition and matching.
+ is a platform that helps travelers reconnect with their lost items through advanced AI image recognition and matching.
 
 ## Features
 
@@ -12,7 +12,7 @@ TripBuddy is a platform that helps travelers reconnect with their lost items thr
 
 ## AI Image Comparison
 
-TripBuddy uses state-of-the-art AI technologies to analyze and compare images:
+ uses state-of-the-art AI technologies to analyze and compare images:
 
 1. **Google Cloud Vision API** for image analysis and object detection
 2. **OpenCV.js** for advanced feature comparison between images
@@ -36,8 +36,8 @@ The system works by:
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/tripbuddy.git
-cd tripbuddy
+git clone https://github.com/yourusername/.git
+cd 
 ```
 
 2. Install dependencies
@@ -48,7 +48,7 @@ npm install
 3. Set up environment variables (create a .env file)
 ```
 PORT=3000
-DB_CONNECTION=mongodb://localhost:27017/tripbuddy
+DB_CONNECTION=mongodb://localhost:27017/
 TOKEN_SECRET=your_jwt_secret
 TOKEN_EXPIRATION=1h
 REFRESH_TOKEN_EXPIRATION=7d

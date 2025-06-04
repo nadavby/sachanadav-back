@@ -1,5 +1,5 @@
 import { IItem } from '../models/item_model';
-import aiMatchingService from './ai-matching-service';
+import { AIMatchingService } from './ai-matching-service';
 
 const calculateDistanceInKm = (
   location1: { lat: number; lng: number } | string | undefined,
@@ -27,8 +27,8 @@ const calculateDistanceInKm = (
 export const shouldSkipComparison = (lostItem: IItem, foundItem: IItem): boolean => {
   if (lostItem.isResolved || foundItem.isResolved) return true;
 
-  if (lostItem.timestamp && foundItem.timestamp && 
-      new Date(foundItem.timestamp) < new Date(lostItem.timestamp)) {
+  if (lostItem.date && foundItem.date && 
+      new Date(foundItem.date) < new Date(lostItem.date)) {
     return true;
   }
 
@@ -38,7 +38,7 @@ export const shouldSkipComparison = (lostItem: IItem, foundItem: IItem): boolean
   }
 
   const distance = calculateDistanceInKm(lostItem.location, foundItem.location);
-  if (distance < Infinity && distance > 100) {
+  if (distance < Infinity && distance > 40) {
     return true;
   }
 
@@ -46,70 +46,16 @@ export const shouldSkipComparison = (lostItem: IItem, foundItem: IItem): boolean
 };
 
 
-class MatchingService {
-  async findMatches(
+ export const MatchingService =
+  async(
     targetItem: IItem,
     potentialMatches: IItem[]
-  ): Promise<{ item: IItem; confidenceScore: number }[]> {
+  ): Promise<{ item: IItem; confidenceScore: number }[]> => {
     try {
-      return await aiMatchingService.findMatches(targetItem, potentialMatches);
+      return await AIMatchingService(targetItem, potentialMatches);
     } catch (error) {
-      console.error('Error in AI matching service:', error);
-      console.log('Falling back to basic matching logic');
-      const matches: { item: IItem; confidenceScore: number }[] = [];
-      const compatibleItems = potentialMatches.filter(item => 
-        item.itemType !== targetItem.itemType
-      );
-      
-      for (const potentialMatch of compatibleItems) {
-        const lostItem = targetItem.itemType === 'lost' ? targetItem : potentialMatch;
-        const foundItem = targetItem.itemType === 'found' ? targetItem : potentialMatch;
-        
-        if (shouldSkipComparison(lostItem, foundItem)) {
-          continue;
-        }
-        
-        let score = 0;
-        
-        if (lostItem.category && foundItem.category && 
-            lostItem.category === foundItem.category) {
-          score += 40;
-        }
-        
-        const distance = calculateDistanceInKm(lostItem.location, foundItem.location);
-        if (distance < Infinity) {
-          const locationScore = Math.max(0, 40 - (distance * 0.4));
-          score += locationScore;
-        }
-        
-        if (lostItem.description && foundItem.description) {
-          const lostWords = new Set(lostItem.description.toLowerCase().split(/\s+/));
-          const foundWords = foundItem.description.toLowerCase().split(/\s+/);
-          
-          let matchingWords = 0;
-          for (const word of foundWords) {
-            if (lostWords.has(word) && word.length > 2) {
-              matchingWords++;
-            }
-          }
-          
-          const descriptionScore = Math.min(20, matchingWords * 5);
-          score += descriptionScore;
-        }
-        
-        if (score > 0) {
-          matches.push({
-            item: potentialMatch,
-            confidenceScore: score
-          });
-        }
-      }
-      
-      return matches.sort((a, b) => b.confidenceScore - a.confidenceScore);
+     console.log(error);
+     return [];
     }
   }
-}
 
-const matchingService = new MatchingService();
-
-export default matchingService; 

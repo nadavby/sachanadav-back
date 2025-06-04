@@ -11,8 +11,13 @@ export interface IItem {
     lat: number;
     lng: number;
   } | string;
+  date?: Date;
   category?: string;
-  timestamp?: Date;
+  colors?: string[];
+  brand?: string;
+  condition?: 'new' | 'worn' | 'damaged' | 'other';
+  flaws?: string;
+  material?: string;
   ownerName?: string;
   ownerEmail?: string;
   visionApiData?: {
@@ -27,11 +32,6 @@ export interface IItem {
         height: number;
       }
     }>;
-    colors?: Array<{
-      color: string;
-      score: number;
-    }>;
-    imageProperties?: any;
   };
   matchedItemId?: string;
   isResolved?: boolean;
@@ -54,18 +54,37 @@ const itemSchema = new mongoose.Schema<IItem>(
     },
     description: {
       type: String,
+      required: true,
+    },
+    date: {
+      type: Date,
+      required: true,
     },
     location: {
       type: mongoose.Schema.Types.Mixed,
+      required: true,
     },
     category: {
       type: String,
+      required: true,
     },
-    ownerName: {
+    colors: {
+      type: [String],
+      required: true,
+    },
+    brand: {
       type: String,
     },
-    ownerEmail: {
+    condition: {
       type: String,
+      required: true,
+    },
+    flaws: {
+      type: String,
+    },
+    material: {
+      type: String,
+      required: true,
     },
     visionApiData: {
       labels: [String],
@@ -79,11 +98,6 @@ const itemSchema = new mongoose.Schema<IItem>(
           height: Number,
         }
       }],
-      colors: [{
-        color: String,
-        score: Number,
-      }],
-      imageProperties: mongoose.Schema.Types.Mixed,
     },
     matchedItemId: {
       type: String,
