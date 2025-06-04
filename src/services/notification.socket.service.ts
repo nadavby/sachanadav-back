@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // socket.ts
-import { Server } from 'socket.io';
+import { Server, Namespace } from 'socket.io';
 import { Server as HttpServer } from 'http';
+import { initChatSocket } from './chat.socket.service';
 
 let io: Server;
+let chatNamespace: Namespace;
 
 export const initSocket = (server: HttpServer) => {
   const origins = ['http://localhost:3002', 'http://localhost:5173'];
@@ -33,12 +35,20 @@ export const initSocket = (server: HttpServer) => {
     });
   });
 
+  // Initialize chat namespace
+  chatNamespace = initChatSocket(io);
+
   return io;
 };
 
 export const getIO = () => {
   if (!io) throw new Error('Socket.io not initialized');
   return io;
+};
+
+export const getChatNamespace = () => {
+  if (!chatNamespace) throw new Error('Chat namespace not initialized');
+  return chatNamespace;
 };
 
 // Anti-duplication system

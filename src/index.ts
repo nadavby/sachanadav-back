@@ -4,7 +4,7 @@ import initApp from "./server";
 import http from "http";
 import https from "https";
 import fs from "fs";
-import { initSocket } from "./services/socket.service";
+import { initSocket } from "./services/notification.socket.service";
 
 const port = process.env.PORT;
 

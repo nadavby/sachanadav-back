@@ -2,7 +2,7 @@
 import { Request, Response } from "express";
 import itemModel, { IItem } from "../models/item_model";
 import userModel from "../models/user_model";
-import { emitNotification } from "../services/socket.service";
+import { emitNotification } from "../services/notification.socket.service";
 import { MatchingService } from "../services/matching-service";
 import visionService from "../services/vision-service";
 import matchModel, { IMatch } from "../models/match_model";
@@ -301,4 +301,25 @@ const enhanceItemWithAI = async (imageUrl: string) => {
   }
 };
 
-export { uploadItem, getAllItems, getItemById, updateItem, deleteItem };
+const resolveItem = async (req: Request, res: Response) => {
+  try {
+    const itemId = req.body.itemId;
+    
+    if (!itemId) {
+      return res.status(400).send("Missing itemId");
+    }
+
+    const item = await itemModel.findById(itemId);
+    if (!item) {
+      return res.status(404).send("Item not found");
+    }
+    item.isResolved = true;
+    await item.save();
+    res.status(200).send(item);
+  } catch (error) {
+    console.error("Error updating item status:", error);
+    res.status(500).send("Error updating item status: " + (error as Error).message);
+  }
+};
+
+export { uploadItem, getAllItems, getItemById, updateItem, deleteItem, resolveItem};

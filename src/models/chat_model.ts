@@ -1,19 +1,39 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
-interface IChatMessage extends Document {
+export interface IChatMessage extends Document {
+  matchId: string;
   senderId: string;
-  receiverId: string;
-  message: string;
+  content: string;
   timestamp: Date;
+  status: 'sent' | 'delivered' | 'read';
 }
 
 const chatMessageSchema = new Schema<IChatMessage>({
-  senderId: { type: String, required: true },
-  receiverId: { type: String, required: true },
-  message: { type: String, required: true },
-  timestamp: { type: Date, default: Date.now },
+  matchId: {
+    type: String,
+    required: true,
+    index: true
+  },
+  senderId: {
+    type: String,
+    required: true
+  },
+  content: {
+    type: String,
+    required: true
+  },
+  timestamp: {
+    type: Date,
+    default: Date.now
+  },
+  status: {
+    type: String,
+    enum: ['sent', 'delivered', 'read'],
+    default: 'sent'
+  }
 });
 
-const ChatMessage = mongoose.model<IChatMessage>('ChatMessage', chatMessageSchema);
+// Create compound index for efficient querying
+chatMessageSchema.index({ matchId: 1, timestamp: -1 });
 
-export default ChatMessage;
+export const ChatMessage = mongoose.model<IChatMessage>('ChatMessage', chatMessageSchema); 
