@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// socket.ts
 import { Server } from 'socket.io';
 import { Server as HttpServer } from 'http';
 
@@ -5,28 +7,29 @@ let io: Server;
 
 export const initSocket = (server: HttpServer) => {
   const origins = ['http://localhost:3002', 'http://localhost:5173'];
-  if (process.env.DOMAIN_BASE) {
-    origins.push(process.env.DOMAIN_BASE);
-  }
+  if (process.env.DOMAIN_BASE) origins.push(process.env.DOMAIN_BASE);
 
   io = new Server(server, {
     cors: {
       origin: origins,
       methods: ['GET', 'POST', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Referer'],
-      credentials: true
-    }
+      credentials: true,
+    },
   });
 
   io.on('connection', (socket) => {
+    console.log('[SOCKET] New connection:', socket.id);
 
     socket.on('authenticate', (data) => {
       if (data && data.userId) {
-        socket.join(data.userId); 
+        socket.join(data.userId);
+        console.log(`[SOCKET] User ${data.userId} joined their room`);
       }
     });
 
     socket.on('disconnect', () => {
+      console.log('[SOCKET] Disconnected:', socket.id);
     });
   });
 
@@ -34,63 +37,36 @@ export const initSocket = (server: HttpServer) => {
 };
 
 export const getIO = () => {
-  if (!io) {
-    throw new Error('Socket.io not initialized');
-  }
+  if (!io) throw new Error('Socket.io not initialized');
   return io;
 };
 
-// Track recently sent notifications to prevent duplicates
-const recentNotifications = new Map<string, Set<string>>();
-const NOTIFICATION_COOLDOWN = 5000; // 5 seconds cooldown
+// Anti-duplication system
+const recentNotifications = new Map<string, number>();
+const NOTIFICATION_COOLDOWN = 5000;
 
-// Clean up old notifications periodically
+// Clean old entries every cooldown interval
 setInterval(() => {
   const now = Date.now();
-  for (const [userId, timestamps] of recentNotifications.entries()) {
-    // Remove notifications older than the cooldown period
-    timestamps.forEach(timestamp => {
-      if (now - parseInt(timestamp) > NOTIFICATION_COOLDOWN) {
-        timestamps.delete(timestamp);
-      }
-    });
-    // Remove user entry if no recent notifications
-    if (timestamps.size === 0) {
-      recentNotifications.delete(userId);
+  for (const [key, timestamp] of recentNotifications.entries()) {
+    if (now - timestamp > NOTIFICATION_COOLDOWN) {
+      recentNotifications.delete(key);
     }
   }
 }, NOTIFICATION_COOLDOWN);
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Emit match notification
 export const emitNotification = (userId: string, notification: any) => {
   try {
     const io = getIO();
-    if (!io) {
-      console.error('Socket.IO not initialized');
-      return;
-    }
+    const key = `${userId}_${notification._id || `${notification.matchId}_${Date.now()}`}`;
 
-    // Create unique key for this notification
-    const notificationKey = `${notification.type}_${notification.data?.matchedItemId || ''}_${Date.now()}`;
-    
-    // Check if we've recently sent a similar notification
-    const userNotifications = recentNotifications.get(userId) || new Set();
-    if (userNotifications.size > 0) {
-      // Don't send duplicate notifications within cooldown period
-      return;
-    }
+    if (recentNotifications.has(key)) return;
+    recentNotifications.set(key, Date.now());
 
-    // Track this notification
-    userNotifications.add(notificationKey);
-    recentNotifications.set(userId, userNotifications);
-    
-    const eventName = notification.type === 'MATCH_FOUND' 
-      ? 'match_notification' 
-      : 'system_notification';
-    
-    io.to(userId).emit(eventName, notification);
-    console.log('Notification emitted to user:', userId);
+    io.to(userId).emit('match_notification', notification);
+    console.log(`[SOCKET] Emitted match notification to user ${userId}`);
   } catch (error) {
-    console.error('Error emitting notification:', error);
+    console.error('Emit notification error:', error);
   }
-}; 
+};

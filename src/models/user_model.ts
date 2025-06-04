@@ -7,6 +7,7 @@ export interface iUser {
   refreshToken?: string[];
   imgURL?: string;
   userName: string;
+  phoneNumber: string;
 }
 
 const userSchema = new mongoose.Schema<iUser>({
@@ -27,6 +28,10 @@ const userSchema = new mongoose.Schema<iUser>({
     type: String,
   },
   userName: {
+    type: String,
+    required: true,
+  },
+  phoneNumber: {
     type: String,
     required: true,
   },

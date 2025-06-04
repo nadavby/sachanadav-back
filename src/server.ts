@@ -11,27 +11,34 @@ import swaggerJsDoc from "swagger-jsdoc";
 import swaggerUI from "swagger-ui-express";
 import fileRoutes from "./routes/file_routes";
 import itemRoutes from "./routes/item_routes";
-import imageComparisonRoutes from "./routes/image_comparison_routes";
 import cors from "cors";
+import matchRoutes from "./routes/match_routes";
+import notificationRoutes from "./routes/notification_routes";
 
 const corsOptions = {
-  origin: ['http://localhost:3002', 'http://localhost:5173'].concat(
+  origin: ["http://localhost:3002", "http://localhost:5173"].concat(
     process.env.DOMAIN_BASE ? [process.env.DOMAIN_BASE] : []
   ),
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Referer'],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Accept", "Referer"],
   credentials: true,
-  maxAge: 86400 
+  maxAge: 86400,
 };
 
 app.use(cors(corsOptions));
 
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || corsOptions.origin[0]);
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', corsOptions.methods.join(', '));
-  res.header('Access-Control-Allow-Headers', corsOptions.allowedHeaders.join(', '));
-  res.header('Access-Control-Max-Age', String(corsOptions.maxAge));
+app.options("*", (req, res) => {
+  res.header(
+    "Access-Control-Allow-Origin",
+    req.headers.origin || corsOptions.origin[0]
+  );
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", corsOptions.methods.join(", "));
+  res.header(
+    "Access-Control-Allow-Headers",
+    corsOptions.allowedHeaders.join(", ")
+  );
+  res.header("Access-Control-Max-Age", String(corsOptions.maxAge));
   res.status(200).end();
 });
 
@@ -40,16 +47,18 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/auth", authRoutes);
 app.use("/file", fileRoutes);
 app.use("/items", itemRoutes);
-app.use("/api/image-comparison", imageComparisonRoutes);
+app.use("/match", matchRoutes);
+app.use("/notification", notificationRoutes);
 app.use("/public", express.static("public"));
 
 const options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "TripBuddy Lost & Found API",
+      title: " Lost & Found API",
       version: "1.0.0",
-      description: "REST server for lost and found items with image recognition",
+      description:
+        "REST server for lost and found items with image recognition",
     },
     servers: [
       { url: process.env.DOMAIN_BASE },

@@ -33,6 +33,7 @@ const googleSignIn = async (req: Request, res: Response) => {
         password: " ",
         imgURL: picture,
         userName: email,
+        phoneNumber: " ",
       });
     }
     const tokens = generateToken(user._id);
@@ -74,6 +75,7 @@ const register = async (req: Request, res: Response) => {
       password: hashedPassword,
       imgURL: ImgUrl,
       userName: req.body.userName,
+      phoneNumber: req.body.phoneNumber,
     });
     res.status(200).send(user);
   } catch (error) {
@@ -369,7 +371,10 @@ export const authMiddleware = (
 
 const getUserById = async (req: Request, res: Response) => {
   try {
-    const userId = new mongoose.Types.ObjectId(req.params.id);
+    const userId = req.params.id;
+    if(!userId){
+      res.status(400).send("No id in params")
+    }
     const user = await userModel.findById(userId);
     if (!user) {
       res.status(404).send("User not found");

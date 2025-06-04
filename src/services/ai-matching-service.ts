@@ -1,14 +1,13 @@
 import { IItem } from '../models/item_model';
 import geminiService from './gemini-service';
-import visionService from './vision-service';
 import { shouldSkipComparison } from './matching-service';
 
 
-class AIMatchingService {
-  async findMatches(
+export const AIMatchingService = 
+  async(
     targetItem: IItem,
     potentialMatches: IItem[]
-  ): Promise<{ item: IItem; confidenceScore: number }[]> {
+  ): Promise<{ item: IItem; confidenceScore: number }[]> => {
     const matches: { item: IItem; confidenceScore: number }[] = [];
     
 
@@ -25,31 +24,19 @@ class AIMatchingService {
           continue;
         }
 
-        const [textComparisonResult, visionResult] = await Promise.all([
-          geminiService.compareDescriptions(lostItem, foundItem),
-          visionService.compareImages(lostItem.imageUrl, foundItem.imageUrl)
-        ]);
-
         const matchEvaluation = await geminiService.evaluateMatch(
           lostItem,
           foundItem,
-          textComparisonResult,
-          visionResult
         );
 
         console.log('\n=== Match Evaluation Results ===');
-        console.log('📝 Text Analysis:', textComparisonResult.reason);
         console.log('\n🖼️ Vision Analysis:');
-        console.log(`- Similarity Score: ${visionResult.similarityScore}%`);
-        if (visionResult.details) {
-          console.log(`- Label Match: ${(visionResult.details.labelSimilarity * 100).toFixed(1)}%`);
-          console.log(`- Object Match: ${(visionResult.details.objectSimilarity * 100).toFixed(1)}%`);
-        }
+      
         console.log('\n📊 Final Score:', matchEvaluation.confidenceScore + '%');
         console.log('Reasoning:', matchEvaluation.reasoning);
         console.log('\n-------------------------------------------\n');
         
-        if (matchEvaluation.confidenceScore >= 55) {
+        if (matchEvaluation.confidenceScore >= 70) {
           matches.push({
             item: potentialMatch,
             confidenceScore: matchEvaluation.confidenceScore
@@ -69,7 +56,3 @@ class AIMatchingService {
 
     return sortedMatches;
   }
-}
-
-const aiMatchingService = new AIMatchingService();
-export default aiMatchingService; 

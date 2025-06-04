@@ -5,10 +5,8 @@ import {
   uploadItem,
   getAllItems,
   getItemById,
-  resolveItem,
   updateItem,
   deleteItem,
-  findMatches,
 } from "../controllers/item_controller";
 import { authMiddleware } from "../controllers/auth_controller";
 import multer from "multer";
@@ -182,7 +180,7 @@ router.post(
           );
       }
 
-      const imageUrl = base + file.path;
+      const imageUrl = base + file.path.replace(/\\/g, '/');
       req.body.imageUrl = imageUrl;
       req.body.userId = req.body.userId || req.params.userId;
 
@@ -261,128 +259,6 @@ router.get("/", getAllItems);
 
 /**
  * @swagger
- * /items/lost:
- *   get:
- *     summary: Get all lost items
- *     description: Retrieve a list of all lost items
- *     tags: [Items]
- *     responses:
- *       200:
- *         description: A list of lost items
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Item'
- *       500:
- *         description: Server error
- */
-router.get("/lost", (req, res) => {
-  req.query.itemType = "lost";
-  return getAllItems(req, res);
-});
-
-/**
- * @swagger
- * /items/found:
- *   get:
- *     summary: Get all found items
- *     description: Retrieve a list of all found items
- *     tags: [Items]
- *     responses:
- *       200:
- *         description: A list of found items
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Item'
- *       500:
- *         description: Server error
- */
-router.get("/found", (req, res) => {
-  req.query.itemType = "found";
-  return getAllItems(req, res);
-});
-
-/**
- * @swagger
- * /items/user/{userId}:
- *   get:
- *     summary: Get items by user ID
- *     description: Retrieve all items uploaded by a specific user
- *     tags: [Items]
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID
- *     responses:
- *       200:
- *         description: A list of items uploaded by the user
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Item'
- *       404:
- *         description: User not found
- *       500:
- *         description: Server error
- */
-router.get("/user/:userId", async (req, res) => {
-  try {
-    res.header(
-      "Access-Control-Allow-Origin",
-      req.headers.origin || "http://localhost:3002"
-    );
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
-    res.header(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, Accept, Referer"
-    );
-
-    const userId = req.params.userId;
-    if (!userId) {
-      return res
-        .status(400)
-        .json({ success: false, error: "User ID is required" });
-    }
-
-    req.query.userId = userId;
-    return getAllItems(req, res);
-  } catch (error) {
-    console.error("Error getting user items:", error);
-    return res.status(500).json({
-      success: false,
-      error: "Error fetching user items: " + (error as Error).message,
-    });
-  }
-});
-
-router.options("/user/:userId", (req, res) => {
-  res.header(
-    "Access-Control-Allow-Origin",
-    req.headers.origin || "http://localhost:3002"
-  );
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, Accept, Referer"
-  );
-
-  res.status(200).end();
-});
-
-/**
- * @swagger
  * /items/{id}:
  *   get:
  *     summary: Get item by ID
@@ -414,39 +290,6 @@ router.options("/user/:userId", (req, res) => {
  */
 router.get("/:id", getItemById);
 
-/**
- * @swagger
- * /items/{id}/resolve:
- *   put:
- *     summary: Mark an item as resolved
- *     description: Marks a lost or found item as resolved (found or returned)
- *     tags: [Items]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Item ID
- *     responses:
- *       200:
- *         description: Item successfully marked as resolved
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Item'
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden - not the item owner
- *       404:
- *         description: Item not found
- *       500:
- *         description: Server error
- */
-router.put("/:id/resolve", authMiddleware, resolveItem);
 
 /**
  * @swagger
@@ -525,47 +368,5 @@ router.put("/:id", authMiddleware, updateItem);
  */
 router.delete("/:id", authMiddleware, deleteItem);
 
-/**
- * @swagger
- * /items/{id}/matches:
- *   get:
- *     summary: Find potential matches for an item
- *     description: Uses AI to find potential matches between lost and found items
- *     tags: [Items]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID of the item to find matches for
- *     responses:
- *       200:
- *         description: List of potential matches with confidence scores
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 matches:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       item:
- *                         $ref: '#/components/schemas/Item'
- *                       score:
- *                         type: number
- *                         description: Confidence score (0-100)
- *       404:
- *         description: Item not found
- *       500:
- *         description: Server error
- */
-router.get("/:itemId/matches", authMiddleware, findMatches);
 
 export = router;
