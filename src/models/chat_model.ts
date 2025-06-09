@@ -3,6 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IChatMessage extends Document {
   matchId: string;
   senderId: string;
+  receiverId: string;
   content: string;
   timestamp: Date;
   status: 'sent' | 'delivered' | 'read';
@@ -16,7 +17,13 @@ const chatMessageSchema = new Schema<IChatMessage>({
   },
   senderId: {
     type: String,
-    required: true
+    required: true,
+    index: true
+  },
+  receiverId: {
+    type: String,
+    required: true,
+    index: true
   },
   content: {
     type: String,
@@ -24,7 +31,8 @@ const chatMessageSchema = new Schema<IChatMessage>({
   },
   timestamp: {
     type: Date,
-    default: Date.now
+    default: Date.now,
+    index: true
   },
   status: {
     type: String,
@@ -33,7 +41,8 @@ const chatMessageSchema = new Schema<IChatMessage>({
   }
 });
 
-// Create compound index for efficient querying
+// Create compound indexes for common queries
 chatMessageSchema.index({ matchId: 1, timestamp: -1 });
+chatMessageSchema.index({ senderId: 1, receiverId: 1, timestamp: -1 });
 
 export const ChatMessage = mongoose.model<IChatMessage>('ChatMessage', chatMessageSchema); 

@@ -38,7 +38,7 @@ export const shouldSkipComparison = (lostItem: IItem, foundItem: IItem): boolean
   }
 
   const distance = calculateDistanceInKm(lostItem.location, foundItem.location);
-  if (distance < Infinity && distance > 40) {
+  if (distance < Infinity && distance > 8) {
     return true;
   }
 
