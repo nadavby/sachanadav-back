@@ -227,7 +227,6 @@ const getItemById = async (req: Request, res: Response) => {
   }
 };
 
-
 const deleteItem = async (req: Request, res: Response) => {
   try {
     const item = await itemModel.findById(req.params.id);
@@ -287,5 +286,5 @@ const enhanceItemWithAI = async (imageUrl: string) => {
   }
 };
 
-export { uploadItem, getAllItems, getItemById, updateItem, deleteItem};
+export { uploadItem, getAllItems, getItemById, deleteItem};
 
