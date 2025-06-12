@@ -14,7 +14,6 @@ interface VisionSummary {
   }>;
   texts: string[];
   logos: string[];
-  dominantColors: string[];
 }
 
 interface ItemLocation {
@@ -79,7 +78,6 @@ class GeminiService {
         })) : [],
         texts: Array.isArray(visionApiData?.texts) ? visionApiData.texts.map((text: any) => text?.text || '').filter(Boolean) : [],
         logos: Array.isArray(visionApiData?.logos) ? visionApiData.logos.map((logo: any) => logo?.description || '').filter(Boolean) : [],
-        dominantColors: Array.isArray(visionApiData?.colors) ? visionApiData.colors : []
       };
     } catch (error) {
       console.error('Error extracting vision summary:', error);
@@ -88,7 +86,6 @@ class GeminiService {
         objects: [],
         texts: [],
         logos: [],
-        dominantColors: []
       };
     }
   }

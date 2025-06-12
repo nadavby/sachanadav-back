@@ -267,12 +267,16 @@ const enhanceItemWithAI = async (imageUrl: string) => {
         width: 0,
         height: 0,
       },
-    }));
-
+    })
+  );
+  const texts = visionAnalysisResult.texts;
+  const logos = visionAnalysisResult.logos;
     return {
       visionApiData: {
         labels,
         objects,
+        texts,
+        logos,
       },
     };
   } catch (error) {
