@@ -62,8 +62,8 @@ const register = async (req: Request, res: Response) => {
     const password = req.body.password;
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    let ImgUrl = req.body.imgUrl;
-    if (!ImgUrl) ImgUrl = null;
+    let imgURL = req.body.imgURL;
+    if (!imgURL) imgURL = null;
     if (await userModel.findOne({ userName: req.body.userName })) {
       return res.status(400).send("User name already exists");
     }
@@ -73,7 +73,7 @@ const register = async (req: Request, res: Response) => {
     const user = await userModel.create({
       email: req.body.email,
       password: hashedPassword,
-      imgURL: ImgUrl,
+      imgURL: imgURL,
       userName: req.body.userName,
       phoneNumber: req.body.phoneNumber,
     });
