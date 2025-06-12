@@ -127,6 +127,8 @@ const uploadItem = async (req: Request, res: Response) => {
               item2Id: savedItem._id,
               userId2: savedItem.userId,
               matchScore: match.score,
+              user1Confirmed: false,
+              user2Confirmed: false
             };
             const savedMatch = await matchModel.create(newMatch);
             if (!savedMatch) {
@@ -257,14 +259,27 @@ const updateItem = async (req: Request, res: Response) => {
 
 const deleteItem = async (req: Request, res: Response) => {
   try {
-    const itemId = req.params.id;
-    if (!itemId) {
-      return res.status(400).send("Item ID is required");
+    const item = await itemModel.findById(req.params.id);
+    if (!item) {
+      res.status(404).send("Item not found");
+      return;
     }
-    await itemModel.findByIdAndDelete(itemId);
+ 
+    const matches = await matchModel.find({
+      $or: [{ item1Id: req.params.id }, { item2Id: req.params.id }],
+    });
+    if (matches.length > 0) {
+      for (const match of matches) {
+        await notificationModel.deleteMany({
+          matchId: match._id,
+        });
+        await matchModel.findByIdAndDelete(match._id);
+      }
+    }
+
+    await itemModel.findByIdAndDelete(req.params.id);
     res.status(200).send("Item deleted successfully");
   } catch (error) {
-    console.error("Error deleting item:", error);
     res.status(500).send("Error deleting item: " + (error as Error).message);
   }
 };
@@ -303,7 +318,7 @@ const enhanceItemWithAI = async (imageUrl: string) => {
 
 const resolveItem = async (req: Request, res: Response) => {
   try {
-    const itemId = req.body.itemId;
+    const itemId = req.params.id;
     
     if (!itemId) {
       return res.status(400).send("Missing itemId");

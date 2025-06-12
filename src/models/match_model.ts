@@ -7,6 +7,8 @@ export interface IMatch {
     item2Id: string;
     userId2: string;
     matchScore: number;
+    user1Confirmed: boolean;
+    user2Confirmed: boolean;
 }
 
 const matchSchema = new mongoose.Schema<IMatch>(
@@ -31,6 +33,14 @@ const matchSchema = new mongoose.Schema<IMatch>(
             type: Number,
             required: true,
         },
+        user1Confirmed: {
+            type: Boolean,
+            default: false,
+        },
+        user2Confirmed: {
+            type: Boolean,
+            default: false,
+        }
     },
     { timestamps: true }
 );

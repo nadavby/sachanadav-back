@@ -2,6 +2,28 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 
+interface VisionText {
+  text: string;
+  confidence?: number;
+  boundingBox?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
+interface VisionLogo {
+  description: string;
+  score: number;
+  boundingBox?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
 interface VisionLabel {
   description: string;
   score: number;
@@ -21,6 +43,8 @@ interface VisionObject {
 interface ImageAnalysisResult {
   labels: VisionLabel[];
   objects: VisionObject[];
+  texts: VisionText[];
+  logos: VisionLogo[];
 }
 
 
@@ -38,26 +62,47 @@ class VisionService {
   public async getImageAnalysis(imageUrl: string): Promise<{
     labels: string[];
     objects: VisionObject[];
+    texts: VisionText[];
+    logos: VisionLogo[];
   }> {
     try {
       const analysisResult = await this.analyzeImage(imageUrl);
       
       if (!analysisResult) {
-        return { labels: [], objects: [] };
+        return { labels: [], objects: [], texts: [], logos: [] };
       }
       
       return {
         labels: analysisResult.labels.map(label => label.description),
-        objects: analysisResult.objects
+        objects: analysisResult.objects,
+        texts: analysisResult.texts,
+        logos: analysisResult.logos
       };
     } catch (error) {
       console.error('Error getting image analysis:', error);
-      return { labels: [], objects: [] };
+      return { labels: [], objects: [], texts: [], logos: [] };
+    }
+  }
+
+  private calculateBoundingBox(vertices: Array<{ x?: number; y?: number; }> | undefined): { x: number; y: number; width: number; height: number; } | undefined {
+    if (!vertices || vertices.length < 4) {
+      return undefined;
+    }
+
+    try {
+      const x = vertices[0]?.x || 0;
+      const y = vertices[0]?.y || 0;
+      const width = Math.abs((vertices[1]?.x || x) - x);
+      const height = Math.abs((vertices[2]?.y || y) - y);
+
+      return { x, y, width, height };
+    } catch (error) {
+      console.error('Error calculating bounding box:', error);
+      return undefined;
     }
   }
 
   private async analyzeImage(imageUrl: string): Promise<ImageAnalysisResult | null> {
-
     if (!this.apiKey) {
       console.error('Cannot analyze image: API key is not configured');
       return null;
@@ -95,7 +140,17 @@ class VisionService {
             },
             {
               type: 'CROP_HINTS' 
-            }
+            },
+            {
+              type: 'TEXT_DETECTION',
+              maxResults: 20,
+              model: 'builtin/latest'
+            },
+            {
+              type: 'LOGO_DETECTION',
+              maxResults: 20,
+              model: 'builtin/latest'
+            },
           ],
           imageContext: {
             languageHints: ['en'],  
@@ -128,27 +183,43 @@ class VisionService {
 
       const analysisResult: ImageAnalysisResult = {
         labels: (result.labelAnnotations || []).map((label: { description: string; score: number; topicality?: number }) => ({
-          description: label.description,
+          description: label.description || '',
           score: Math.max(label.score || 0, label.topicality || 0)
         })),
         objects: (result.localizedObjectAnnotations || []).map((obj: { 
           name: string; 
           score: number; 
           boundingPoly?: {
-            normalizedVertices: Array<{ x: number; y: number; }>
+            normalizedVertices: Array<{ x?: number; y?: number; }>
           }
         }) => ({
-          name: obj.name,
-          score: obj.score,
-          boundingBox: obj.boundingPoly ? {
-            x: obj.boundingPoly.normalizedVertices[0]?.x || 0,
-            y: obj.boundingPoly.normalizedVertices[0]?.y || 0,
-            width: Math.abs((obj.boundingPoly.normalizedVertices[1]?.x || 0) - (obj.boundingPoly.normalizedVertices[0]?.x || 0)),
-            height: Math.abs((obj.boundingPoly.normalizedVertices[2]?.y || 0) - (obj.boundingPoly.normalizedVertices[0]?.y || 0))
-          } : undefined
+          name: obj.name || '',
+          score: obj.score || 0,
+          boundingBox: this.calculateBoundingBox(obj.boundingPoly?.normalizedVertices)
+        })),
+        texts: (result.textAnnotations || []).map((text: { 
+          description: string; 
+          score: number; 
+          boundingPoly?: { 
+            normalizedVertices: Array<{ x?: number; y?: number; }> 
+          } 
+        }) => ({
+          text: text.description || '',
+          confidence: text.score || 0,
+          boundingBox: this.calculateBoundingBox(text.boundingPoly?.normalizedVertices)
+        })),
+        logos: (result.logoAnnotations || []).map((logo: { 
+          description: string; 
+          score: number; 
+          boundingPoly?: { 
+            normalizedVertices: Array<{ x?: number; y?: number; }> 
+          } 
+        }) => ({
+          description: logo.description || '',
+          score: logo.score || 0,
+          boundingBox: this.calculateBoundingBox(logo.boundingPoly?.normalizedVertices)
         }))
       };
-
 
       return analysisResult;
     } catch (error) {

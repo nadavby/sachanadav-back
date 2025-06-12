@@ -1,5 +1,5 @@
 import { Server, Socket } from 'socket.io';
-import { ChatMessage, IChatMessage } from '../models/chat_model';
+import chatModel, { IChatMessage } from '../models/chat_model';
 
 interface UserChatInfo {
   matchId: string;
@@ -7,6 +7,12 @@ interface UserChatInfo {
   lastMessage?: IChatMessage;
   unreadCount: number;
   isOnline?: boolean;
+}
+
+interface ChatAggregation {
+  _id: string;
+  lastMessage: IChatMessage;
+  unreadCount: number;
 }
 
 export const initChatSocket = (io: Server) => {
@@ -49,7 +55,7 @@ export const initChatSocket = (io: Server) => {
 
       // Load and send chat history
       try {
-        const messages = await ChatMessage.find({ matchId })
+        const messages = await chatModel.find({ matchId })
           .sort({ timestamp: 1 })
           .limit(100)
           .lean();
@@ -57,7 +63,7 @@ export const initChatSocket = (io: Server) => {
 
         // Mark messages as delivered for this user
         if (socket.data.userId) {
-          await ChatMessage.updateMany(
+          await chatModel.updateMany(
             { 
               matchId,
               senderId: { $ne: socket.data.userId },
@@ -81,7 +87,7 @@ export const initChatSocket = (io: Server) => {
     }) => {
       try {
         // Create and save the message
-        const message = new ChatMessage({
+        const message = new chatModel({
           matchId: data.matchId,
           senderId: data.senderId,
           receiverId: data.receiverId,
@@ -104,7 +110,7 @@ export const initChatSocket = (io: Server) => {
       status: 'delivered' | 'read';
     }) => {
       try {
-        const message = await ChatMessage.findByIdAndUpdate(
+        const message = await chatModel.findByIdAndUpdate(
           data.messageId,
           { status: data.status },
           { new: true }
@@ -123,9 +129,13 @@ export const initChatSocket = (io: Server) => {
     // Get user's chats
     socket.on('get_user_chats', async (userId: string) => {
       try {
-        // Find all matches where the user has messages
-        const userChats = await ChatMessage.aggregate([
-          { $match: { $or: [{ senderId: userId }, { receiverId: userId }] } },
+        // Find all matches where the user has messages, including resolved items
+        const userChats = await chatModel.aggregate([
+          { 
+            $match: { 
+              $or: [{ senderId: userId }, { receiverId: userId }],
+            }
+          },
           { $sort: { timestamp: -1 } },
           {
             $group: {
@@ -149,7 +159,7 @@ export const initChatSocket = (io: Server) => {
           }
         ]);
 
-        const chatInfos: UserChatInfo[] = userChats.map(chat => ({
+        const chatInfos: UserChatInfo[] = userChats.map((chat: ChatAggregation) => ({
           matchId: chat._id,
           otherUserId: chat.lastMessage.senderId === userId 
             ? chat.lastMessage.receiverId 
