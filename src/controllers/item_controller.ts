@@ -286,5 +286,5 @@ const enhanceItemWithAI = async (imageUrl: string) => {
   }
 };
 
-
 export { uploadItem, getAllItems, getItemById, deleteItem};
+

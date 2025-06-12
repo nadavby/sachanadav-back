@@ -58,6 +58,9 @@ const confirmMatch = async (req: Request, res: Response) => {
     if (!matchId || !userId) {
       return res.status(400).json({ message: 'Missing required fields: matchId and userId' });
     }
+    await notificationModel.deleteMany({
+      matchId: matchId,
+    });
 
     const match = await matchModel.findById(matchId);
 
