@@ -120,7 +120,7 @@ describe("Item API Tests", () => {
 
   test("Should create a found item", async () => {
     const res = await request(app)
-      .post("/items/upload-item")
+      .post("/items/report-item")
       .set("Authorization", "Bearer " + accessToken)
       .send({
         userId: userId,
