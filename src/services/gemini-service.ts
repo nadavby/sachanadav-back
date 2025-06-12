@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
+import { GoogleGenerativeAI, GenerativeModel, Part } from "@google/generative-ai";
 import { IItem } from "../models/item_model";
 
 type IItemWithTimestamps = IItem & {
@@ -6,76 +6,171 @@ type IItemWithTimestamps = IItem & {
   updatedAt?: Date;
 };
 
+interface VisionSummary {
+  labels: string[];
+  objects: Array<{
+    name: string;
+    score: number;
+  }>;
+  texts: string[];
+  logos: string[];
+  dominantColors: string[];
+}
+
+interface ItemLocation {
+  lat?: number;
+  lng?: number;
+  address?: string;
+}
+
+interface ItemData {
+  description: string;
+  category: string;
+  brand: string;
+  colors: string[];
+  condition: string;
+  flaws: string;
+  material: string;
+  location: ItemLocation;
+  date: string;
+  visionSummary: VisionSummary;
+}
+
+interface MatchEvaluationRequest {
+  instruction: {
+    task: string;
+    outputFormat: {
+      type: "json";
+      fields: {
+        confidenceScore: "number (0-100)";
+        reasoning: "string explaining the match evaluation";
+      };
+    };
+    matchingCriteria: string[];
+  };
+  data: {
+    lostItem: ItemData;
+    foundItem: ItemData;
+  };
+}
+
 class GeminiService {
   private genAI: GoogleGenerativeAI;
   private model: GenerativeModel;
   
   constructor() {
-    const apiKey = process.env.GEMINI_API_KEY || "AIzaSyBuhqOtRNZq2954QjKMsI66vbbwCNIjsfU";
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY environment variable is not set');
+    }
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    this.model = this.genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash"  // Using flash model for better quota limits
+    });
   }
   
- 
+  private extractVisionSummary(visionApiData: any): VisionSummary {
+    try {
+      return {
+        labels: Array.isArray(visionApiData?.labels) ? visionApiData.labels.slice(0, 10) : [],
+        objects: Array.isArray(visionApiData?.objects) ? visionApiData.objects.map((obj: any) => ({
+          name: obj?.name || 'unknown',
+          score: typeof obj?.score === 'number' ? obj.score : 0
+        })) : [],
+        texts: Array.isArray(visionApiData?.texts) ? visionApiData.texts.map((text: any) => text?.text || '').filter(Boolean) : [],
+        logos: Array.isArray(visionApiData?.logos) ? visionApiData.logos.map((logo: any) => logo?.description || '').filter(Boolean) : [],
+        dominantColors: Array.isArray(visionApiData?.colors) ? visionApiData.colors : []
+      };
+    } catch (error) {
+      console.error('Error extracting vision summary:', error);
+      return {
+        labels: [],
+        objects: [],
+        texts: [],
+        logos: [],
+        dominantColors: []
+      };
+    }
+  }
+
+  private prepareItemData(item: IItem): ItemData {
+    const location = typeof item.location === 'string' ? {} as ItemLocation : (item.location || {}) as ItemLocation;
+    
+    return {
+      description: item.description || 'N/A',
+      category: item.category || 'N/A',
+      brand: item.brand || 'N/A',
+      colors: item.colors || [],
+      condition: item.condition || 'N/A',
+      flaws: item.flaws || 'N/A',
+      material: item.material || 'N/A',
+      location,
+      date: (item as IItemWithTimestamps).createdAt?.toLocaleString() || 'N/A',
+      visionSummary: this.extractVisionSummary(item.visionApiData)
+    };
+  }
+
   async evaluateMatch(
     lostItem: IItem, 
     foundItem: IItem,
   ): Promise<{ confidenceScore: number; reasoning: string }> {
     try {
-      const prompt = `
-You are an expert match evaluator for a Lost & Found platform.
+      const request: MatchEvaluationRequest = {
+        instruction: {
+          task: "Evaluate whether the LOST and FOUND items refer to the same object based on their characteristics and metadata.",
+          outputFormat: {
+            type: "json",
+            fields: {
+              confidenceScore: "number (0-100)",
+              reasoning: "string explaining the match evaluation"
+            }
+          },
+          matchingCriteria: [
+            "Compare descriptions for semantic similarity",
+            "Check if categories are exact matches or related",
+            "Verify brand names, including model variants",
+            "Compare colors and materials",
+            "Evaluate condition and specific flaws",
+            "Analyze vision data (labels, objects, texts, logos)",
+            "Consider temporal sequence (found date after lost date)",
+            "Assess geographic proximity of locations"
+          ]
+        },
+        data: {
+          lostItem: this.prepareItemData(lostItem),
+          foundItem: this.prepareItemData(foundItem)
+        }
+      };
 
-Your task is to analyze whether a lost item and a found item are likely the same, based on **all provided data**.
+      const parts: Part[] = [
+        {
+          text: `
+Task: ${request.instruction.task}
 
-You must consider:
-- Descriptions: semantic similarity, details (e.g., color, brand, condition, shape, etc.)
-- Categories: exact or related category
-- Time and Date: found must be after lost, and should be reasonably close
-- Location: evaluate distance and how plausible it is that the item moved
-- **Vision Data**: Compare the two vision API responses (labelAnnotations, colors, objects) and analyze how visually similar the two items are based on detected elements (like colors, objects, labels, etc.)
-- **Brand**: If both items mention the same brand, or one mentions a known variant/model of the brand, this is a **strong indicator** of a match.
-- **Condition**: If both items are in similar or identical condition (e.g., "like new", "scratched", "used"), this is a **moderately strong match factor**.
-- **Flaws**: Shared flaws (e.g., "crack on screen", "torn handle") are helpful, but are **optional** and often missing; match only if explicitly similar.
-- **Material**: Consider only if there's a conflict (e.g., one is “metal” and the other “fabric”) — otherwise treat this feature as **low-weight**, since many items are mixed-material.
-- **Colors**: Compare the colors of the lost and found items. **strong indicators**
+Output Format: Return a JSON object with:
+- confidenceScore: number between 0-100
+- reasoning: detailed explanation of the match evaluation
 
-Your evaluation must consider all aspects holistically. You may perform internal comparisons between the vision data – for example, how many shared labels, visual elements, or colors exist between the two items.
+Matching Criteria:
+${request.instruction.matchingCriteria.map(c => '- ' + c).join('\n')}
 
-Confidence Score should be between 0 and 100:
-   - A **score of 100** should only be given when **every aspect** aligns: descriptions(), categories, visual data, time, and location — with *no significant discrepancies*.
-   - A score between **90–99** reflects high confidence with minor imperfections.
-   - A score below 90 indicates moderate or low confidence.
-   
-Return ONLY valid JSON in this exact format:
-{"confidenceScore": number, "reasoning": "your explanation"}
+Items to Compare:
 
 LOST ITEM:
-Description: ${lostItem.description || 'N/A'}
-Category: ${lostItem.category || 'N/A'}
-Location: ${JSON.stringify(lostItem.location) || 'N/A'}
-Date Lost: ${(lostItem as IItemWithTimestamps).createdAt?.toLocaleString() || 'N/A'}
-Vision API Data: ${JSON.stringify(lostItem.visionApiData || {}, null, 2)}
-Colors: ${lostItem.colors?.join(', ') || 'N/A'}
-Brand: ${lostItem.brand || 'N/A'}
-Condition: ${lostItem.condition || 'N/A'}
-Flaws: ${lostItem.flaws || 'N/A'}
-Material: ${lostItem.material || 'N/A'}
+${JSON.stringify(request.data.lostItem, null, 2)}
 
 FOUND ITEM:
-Description: ${foundItem.description || 'N/A'}
-Category: ${foundItem.category || 'N/A'}
-Location: ${JSON.stringify(foundItem.location) || 'N/A'}
-Date Found: ${(foundItem as IItemWithTimestamps).createdAt?.toLocaleString() || 'N/A'}
-Vision API Data: ${JSON.stringify(foundItem.visionApiData || {}, null, 2)}
-Colors: ${foundItem.colors?.join(', ') || 'N/A'}
-Brand: ${foundItem.brand || 'N/A'}
-Condition: ${foundItem.condition || 'N/A'}
-Flaws: ${foundItem.flaws || 'N/A'}
-Material: ${foundItem.material || 'N/A'}
-`;
-      
+${JSON.stringify(request.data.foundItem, null, 2)}
 
-      const result = await this.model.generateContent(prompt);
+Analyze the items and return ONLY a JSON response in the format:
+{
+  "confidenceScore": number,
+  "reasoning": "detailed explanation"
+}`
+        } as Part
+      ];
+
+      const result = await this.model.generateContent(parts);
       const responseText = result.response.text().trim();
       
       try {
@@ -98,6 +193,13 @@ Material: ${foundItem.material || 'N/A'}
         return { confidenceScore: 0, reasoning: "" };
       }
     } catch (error) {
+      if ((error as any).status === 429) {
+        console.error("Rate limit exceeded. Please try again in a few seconds.");
+        return { 
+          confidenceScore: 0, 
+          reasoning: "Rate limit exceeded. Please try again in a few seconds." 
+        };
+      }
       console.error("Error in evaluateMatch:", error);
       return { confidenceScore: 0, reasoning: "" };
     }

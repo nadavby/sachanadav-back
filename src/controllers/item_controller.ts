@@ -127,6 +127,8 @@ const uploadItem = async (req: Request, res: Response) => {
               item2Id: savedItem._id,
               userId2: savedItem.userId,
               matchScore: match.score,
+              user1Confirmed: false,
+              user2Confirmed: false
             };
             const savedMatch = await matchModel.create(newMatch);
             if (!savedMatch) {
@@ -287,7 +289,7 @@ const enhanceItemWithAI = async (imageUrl: string) => {
 
 const resolveItem = async (req: Request, res: Response) => {
   try {
-    const itemId = req.body.itemId;
+    const itemId = req.params.id;
     
     if (!itemId) {
       return res.status(400).send("Missing itemId");

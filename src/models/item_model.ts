@@ -32,6 +32,26 @@ export interface IItem {
         height: number;
       }
     }>;
+    texts?: Array<{
+      text: string;
+      confidence?: number;
+      boundingBox?: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }
+    }>;
+    logos?: Array<{
+      description: string;
+      score: number;
+      boundingBox?: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }
+    }>;
   };
   matchedItemId?: string;
   isResolved?: boolean;
@@ -98,6 +118,26 @@ const itemSchema = new mongoose.Schema<IItem>(
           height: Number,
         }
       }],
+      texts: [{
+        text: String,
+        confidence: Number,
+        boundingBox: {
+          x: Number,
+          y: Number,    
+          width: Number,
+          height: Number,
+        }
+      }],
+      logos: [{
+        description: String,    
+        score: Number,
+        boundingBox: {
+          x: Number,
+          y: Number,
+          width: Number,
+          height: Number,
+        }
+      }]
     },
     matchedItemId: {
       type: String,

@@ -45,4 +45,5 @@ const chatMessageSchema = new Schema<IChatMessage>({
 chatMessageSchema.index({ matchId: 1, timestamp: -1 });
 chatMessageSchema.index({ senderId: 1, receiverId: 1, timestamp: -1 });
 
-export const ChatMessage = mongoose.model<IChatMessage>('ChatMessage', chatMessageSchema); 
+const chatModel = mongoose.model<IChatMessage>('ChatMessage', chatMessageSchema);
+export default chatModel; 
