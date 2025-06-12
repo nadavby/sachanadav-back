@@ -5,9 +5,7 @@ import {
   uploadItem,
   getAllItems,
   getItemById,
-  updateItem,
   deleteItem,
-  resolveItem
 } from "../controllers/item_controller";
 import { authMiddleware } from "../controllers/auth_controller";
 import multer from "multer";
@@ -291,54 +289,6 @@ router.get("/", getAllItems);
  */
 router.get("/:id", getItemById);
 
-
-/**
- * @swagger
- * /items/{id}:
- *   put:
- *     summary: Update an item
- *     description: Update details of a lost or found item
- *     tags: [Items]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Item ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               description:
- *                 type: string
- *               location:
- *                 type: string
- *               category:
- *                 type: string
- *     responses:
- *       200:
- *         description: Item updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Item'
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden - not the item owner
- *       404:
- *         description: Item not found
- *       500:
- *         description: Server error
- */
-router.put("/:id", authMiddleware, updateItem);
-
 /**
  * @swagger
  * /items/{id}:
@@ -368,47 +318,5 @@ router.put("/:id", authMiddleware, updateItem);
  *         description: Server error
  */
 router.delete("/:id", authMiddleware, deleteItem);
-
-/**
- * @swagger
- * /items/{id}/status:
- *   put:
- *     summary: Update the status of an item
- *     description: Update the status of a lost or found item
- *     tags: [Items]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Item ID
- *     requestBody:
- *       required: true
- *       content: 
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               status:  
- *                 type: string
- *                 enum: [resolved, unresolved]
- *     responses:
- *       200:
- *         description: Item status updated successfully
- *         content:
- *           application/json:  
- *             schema:
- *               $ref: '#/components/schemas/Item'
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Item not found
- *       500:
- *         description: Server error
- */
-router.put("/:id/resolve", authMiddleware, resolveItem);
 
 export = router;

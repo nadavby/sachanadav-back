@@ -227,36 +227,6 @@ const getItemById = async (req: Request, res: Response) => {
   }
 };
 
-const updateItem = async (req: Request, res: Response) => {
-  try {
-    const item = await itemModel.findById(req.params.id);
-    if (!item) {
-      return res.status(404).send("Item not found");
-    }
-
-    if (item.userId !== req.body.userId) {
-      return res.status(403).send("Not authorized to update this item");
-    }
-
-    if (req.body.description) item.description = req.body.description;
-    if (req.body.location) item.location = req.body.location;
-    if (req.body.category) item.category = req.body.category;
-    if (req.body.date) item.date = req.body.date;
-    if (req.body.colors) item.colors = req.body.colors;
-    if (req.body.brand) item.brand = req.body.brand;
-    if (req.body.condition) item.condition = req.body.condition;
-    if (req.body.flaws) item.flaws = req.body.flaws;
-    if (req.body.material) item.material = req.body.material;
-    if (req.body.ownerName) item.ownerName = req.body.ownerName;
-    if (req.body.ownerEmail) item.ownerEmail = req.body.ownerEmail;
-    await item.save();
-    res.status(200).send(item);
-  } catch (error) {
-    console.error("Error updating item:", error);
-    res.status(500).send("Error updating item: " + (error as Error).message);
-  }
-};
-
 const deleteItem = async (req: Request, res: Response) => {
   try {
     const item = await itemModel.findById(req.params.id);
@@ -317,4 +287,4 @@ const enhanceItemWithAI = async (imageUrl: string) => {
 };
 
 
-export { uploadItem, getAllItems, getItemById, updateItem, deleteItem};
+export { uploadItem, getAllItems, getItemById, deleteItem};
