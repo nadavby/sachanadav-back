@@ -316,25 +316,5 @@ const enhanceItemWithAI = async (imageUrl: string) => {
   }
 };
 
-const resolveItem = async (req: Request, res: Response) => {
-  try {
-    const itemId = req.params.id;
-    
-    if (!itemId) {
-      return res.status(400).send("Missing itemId");
-    }
 
-    const item = await itemModel.findById(itemId);
-    if (!item) {
-      return res.status(404).send("Item not found");
-    }
-    item.isResolved = true;
-    await item.save();
-    res.status(200).send(item);
-  } catch (error) {
-    console.error("Error updating item status:", error);
-    res.status(500).send("Error updating item status: " + (error as Error).message);
-  }
-};
-
-export { uploadItem, getAllItems, getItemById, updateItem, deleteItem, resolveItem};
+export { uploadItem, getAllItems, getItemById, updateItem, deleteItem};

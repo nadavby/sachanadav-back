@@ -50,6 +50,7 @@ const deleteById = async (req: Request, res: Response) => {
   }
 };
 
+// make sure to delete all matches related to both items
 const confirmMatch = async (req: Request, res: Response) => {
   try {
     const { matchId, userId } = req.body;
@@ -105,6 +106,12 @@ const confirmMatch = async (req: Request, res: Response) => {
 
       // Delete the match since it's fully confirmed
       await matchModel.findByIdAndDelete(matchId);
+
+      // Delete all matches related to both items (maybe item1Id is Item2id in the match) 
+      await matchModel.deleteMany({ $or: [{ item1Id: match.item1Id}, {item2Id: match.item2Id }, { item1Id: match.item2Id}, {item2Id: match.item1Id }]   });
+
+      // Delete all notifications related to both items
+      await notificationModel.deleteMany({ $or: [{ item1Id: match.item1Id}, {item2Id: match.item2Id }, { item1Id: match.item2Id}, {item2Id: match.item1Id }] });
       
       return res.json({ 
         message: 'Match fully confirmed and completed',
