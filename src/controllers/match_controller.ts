@@ -1,6 +1,6 @@
 /** @format */
 import { Request, Response } from "express";
-import matchModel, { IMatch } from "../models/match_model";
+import matchModel from "../models/match_model";
 import notificationModel from "../models/notification_model";
 import itemModel from "../models/item_model";
 import chatModel from "../models/chat_model";
